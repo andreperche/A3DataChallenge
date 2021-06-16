@@ -14,19 +14,15 @@ dirName = "data"
 versionControl = {}
 dados = [{}]
 versionControlFile = "versionControl.json"
-versionUpdateControlFile = "versionUpdateControl.json"
 versionControlFileEmpty = False
 versionControlFileUpdate = False
 notExtracted = False
-#localPath = "Z:/Documentos/projetos_python/a3datachallenge/data"
+ftpDir = "pdet/microdados/RAIS" 
 
 ftp = ftplib.FTP("ftp.mtps.gov.br")
-ftp.login("anonymous","")
+ftp.login()
+ftp.cwd(ftpDir)
 
-data = []
-ftp.cwd("pdet/microdados/RAIS")
-
-listing = []
 folderList = ftp.nlst() 
 folderList.remove("Layouts")
 
@@ -67,18 +63,22 @@ for year in folderList:
             print("!---Directory ", subDirName, " created.")
         except FileExistsError:
             print("!---Directory ", subDirName, " already exists!")        
-                
+        
+        ftp.login
         fileList = []                            
         fileInfoList = [] 
-                       
+        ftp.login("anonymous","")
+        ftp.cwd(ftpDir)               
         ftp.cwd(year)        
             
         ftp.retrlines("LIST", fileList.append)                    
-        
+        totalFiles = len(fileList)
+        # Close connection because of timeout
+        ftp.close
         # Downloading/Extracting each file within year folder
         print("+---Downloading Year: " + year)        
-        for index in range(len(fileList)):
-            print("?")
+        for index in range(totalFiles):
+            
             # Retrieving file details
             wordsFiles = fileList[index].split(None, 8)
             filename = wordsFiles[-1].lstrip()
@@ -104,56 +104,45 @@ for year in folderList:
 
             # Cheking and Updating                                                                     
             if os.path.isfile(pathFile):                                
-                print("!---File already exists!")
-                #print("|---Extracting file")                
-                #archive = py7zr.SevenZipFile(pathFile, mode='r')
-                #archive.extractall(subDirName)
-                #archive.close()                  
-                #os.remove(pathFile)
-                #notExtracted = False
+                print("!---File already exists! (", (index+1),"/",totalFiles,")")                
                 notExtracted = True                
                 if not fileFound:
                     versionControlFileUpdate = True
                 fileFound =  True                  
                                                             
             if updateFile or not fileFound:
-                print("|---Downloading File: ", filename)              
+                print(" ---Downloading File(",(index+1),"/",totalFiles,"): ", filename)              
                 lf = open(pathFile, "wb")
+                ftp.login()
+                ftp.cwd(ftpDir)
                 ftp.retrbinary("RETR " + filename, lf.write)                
+                ftp.close
                 lf.close      
-                notExtracted = True
-                
-            #if notExtracted:
-                #print("|---Extracting file") 
-                #time.sleep(20)                
-                
-                #with py7zr.SevenZipFile(pathFile, mode='r') as archive:
-                #    archive.extractall(subDirName)
-                #    archive.close()                  
-                #os.remove(pathFile)
-                #notExtracted = False                                                                          
-                                                            
+                notExtracted = True                                                                                        
         
         dados.append({"year":year, "files": fileInfoList})     
 
         #Extract Data
         if notExtracted:
-            print("|---Extracting files") 
+            
             os.chdir(subDirName)
             files = os.listdir()
+            totalFiles = len(files)
+            print("+---Extracting files")             
             for f in files:
-                if "7z" in f:
+                if "7z" in f: 
+                    print(" -------File: ", f)
                     os.system("py7zr x " + f)
                     os.remove(f)
         #Go back to previous folder    
-        os.chdir("../")
-        ftp.cwd("../")              
+        os.chdir("../")                    
 
 #Remove first blank item
 dados.pop(0)
 if not versionControlFileEmpty:
     aux = versionControl["dados"]
     dados.append(aux)
+    print("!---Version Control Updated.")
 if versionControlFileEmpty or versionControlFileUpdate:
     versionControl = {"dados": dados}
     a_file = open(versionControlFile,"w")       
