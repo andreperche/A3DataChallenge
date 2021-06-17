@@ -10,8 +10,8 @@ import pyarrow.parquet as pq
 import pyarrow.csv as pc
 import glob
 
-inicialYear = 2012
-finalYear = 2015
+inicialYear = 2010
+finalYear = 2019
 dirName = "data"
 versionControl = {}
 dados = [{}]
@@ -152,6 +152,7 @@ for year in folderList:
         os.chdir("../")
         ftp.cwd("../")
                                 
+ftp.quit()
 #Remove first blank item
 dados.pop(0)
 if not versionControlFileEmpty:
