@@ -18,7 +18,6 @@ dados = [{}]
 versionControlFile = "versionControl.json"
 versionControlFileEmpty = False
 versionControlFileUpdate = False
-notExtracted = False
 ftpDir = "pdet/microdados/RAIS" 
 
 ftp = ftplib.FTP("ftp.mtps.gov.br")
@@ -61,6 +60,7 @@ for year in folderList:
         except FileExistsError:
             print("!---Directory ", subDirName, " already exists!")        
         
+        ftp.close
         ftp.login
         fileList = []                            
         fileInfoList = [] 
@@ -99,11 +99,13 @@ for year in folderList:
                                 if j["size"] != fileSize:                            
                                     updateFile = True
                                     versionControlFileUpdate = True                                                                        
-
+            
             # Cheking and Updating                                                                     
-            if os.path.isfile(pathFile):                                
-                print("!---File already exists! (", (index+1),"/",totalFiles,")")                
-                notExtracted = True                
+            if len(glob.glob(subDirName+filename)) > 0:                
+                if os.stat(subDirName+filename).st_size != fileSize:
+                    updateFile = True            
+            if len(glob.glob(subDirName+filename)) > 0 or len(glob.glob(subDirName+filename[:-3]+".txt")) > 0 or len(glob.glob(subDirName+filename[:-3]+".parquet")) > 0:                                
+                print("!---File already exists! (", (index+1),"/",totalFiles,")")                                                
                 if not fileFound:
                     versionControlFileUpdate = True
                 fileFound =  True                  
@@ -116,28 +118,24 @@ for year in folderList:
                 ftp.cwd(year)
                 ftp.retrbinary("RETR " + filename, lf.write)                
                 ftp.close
-                lf.close      
-                notExtracted = True                                                                                        
+                lf.close                                                                                                             
         
         dados.append({"year":year, "files": fileInfoList})     
 
         #Extract Data
-        if notExtracted:
-            
-            os.chdir(subDirName)
+        os.chdir(subDirName)
+        if len(glob.glob("*.7z")) > 0:                                             
             files = glob.glob("*.7z")
             totalFiles = len(files)
             print("+---Extracting files")             
             for f in files:                 
                 print(" -------File: ", f)
                 os.system("py7zr x " + f)
-                os.remove(f)
-
-            #Go back to previous folder    
-            os.chdir("../")  
-
-        #Parse to parquet file
-        os.chdir(subDirName)
+                try:
+                    os.remove(f)            
+                except:
+                    print(" -------File: ", f, " was not removed.")
+        #Parse to parquet file        
         if len(glob.glob("*.txt")) > 0:             
             files = glob.glob("*.txt") 
             print("+---Parsing parquet files") 
@@ -146,7 +144,10 @@ for year in folderList:
                 arrow_table = pc.read_csv(f[:-4]+".txt", parse_options=pc.ParseOptions(delimiter=";"),read_options=pc.ReadOptions(encoding='cp1252'))
                 parquet_file = f[:-4] + ".parquet"
                 pq.write_table(arrow_table, parquet_file)  
-                os.remove(f)
+                try:
+                    os.remove(f)            
+                except:
+                    print(" -------File: ", f, " was not removed.")
         #Go back to previous folder    
         os.chdir("../")
                                 
