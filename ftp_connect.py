@@ -6,27 +6,25 @@ import py7zr
 import json
 from flatten_dict import flatten
 from flatten_dict import unflatten
-import time
+import pyarrow.parquet as pq
+import pyarrow.csv as pc
+import glob
 
-inicialYear = 2010
-finalYear = 2010
+inicialYear = 2012
+finalYear = 2015
 dirName = "data"
 versionControl = {}
 dados = [{}]
 versionControlFile = "versionControl.json"
-versionUpdateControlFile = "versionUpdateControl.json"
 versionControlFileEmpty = False
 versionControlFileUpdate = False
 notExtracted = False
-#localPath = "Z:/Documentos/projetos_python/a3datachallenge/data"
+ftpDir = "pdet/microdados/RAIS" 
 
 ftp = ftplib.FTP("ftp.mtps.gov.br")
-ftp.login("anonymous","")
+ftp.login()
+ftp.cwd(ftpDir)
 
-data = []
-ftp.cwd("pdet/microdados/RAIS")
-
-listing = []
 folderList = ftp.nlst() 
 folderList.remove("Layouts")
 
@@ -44,14 +42,9 @@ if os.path.isfile(versionControlFile):
         content = a_file.read()        
         try:
             versionControl = json.loads(content)
+            #print(versionControl)
         except JSONDecodeError:
-            versionControlFileEmpty = True
-
-        #print(versionControl["dados"][0]["files"])
-        #if os.path.isfile(versionUpdateControlFile):                      
-        #    with open(versionUpdateControlFile) as file:            
-        #        versionUpdateControlJson = json.load(file)            
-        #        versionControlFileEmpty = "true"                         
+            versionControlFileEmpty = True                        
 else:
     open(versionControlFile, "a")
     versionControlFileEmpty = True
@@ -67,18 +60,22 @@ for year in folderList:
             print("!---Directory ", subDirName, " created.")
         except FileExistsError:
             print("!---Directory ", subDirName, " already exists!")        
-                
+        
+        ftp.login
         fileList = []                            
         fileInfoList = [] 
-                       
+        ftp.login()
+        ftp.cwd(ftpDir)               
         ftp.cwd(year)        
             
         ftp.retrlines("LIST", fileList.append)                    
-        
+        totalFiles = len(fileList)
+        # Close connection because of timeout
+        ftp.close
         # Downloading/Extracting each file within year folder
         print("+---Downloading Year: " + year)        
-        for index in range(len(fileList)):
-            print("?")
+        for index in range(totalFiles):
+            
             # Retrieving file details
             wordsFiles = fileList[index].split(None, 8)
             filename = wordsFiles[-1].lstrip()
@@ -94,6 +91,7 @@ for year in folderList:
             # Check if versionControlFile is empty and if file already exists and is updated
             if not versionControlFileEmpty:                
                 for i in versionControl["dados"] :
+                    #print(i)
                     if i["year"] == year:
                         for j in i["files"]:
                             if j["filename"] == filename:
@@ -104,56 +102,60 @@ for year in folderList:
 
             # Cheking and Updating                                                                     
             if os.path.isfile(pathFile):                                
-                print("!---File already exists!")
-                #print("|---Extracting file")                
-                #archive = py7zr.SevenZipFile(pathFile, mode='r')
-                #archive.extractall(subDirName)
-                #archive.close()                  
-                #os.remove(pathFile)
-                #notExtracted = False
+                print("!---File already exists! (", (index+1),"/",totalFiles,")")                
                 notExtracted = True                
                 if not fileFound:
                     versionControlFileUpdate = True
                 fileFound =  True                  
                                                             
             if updateFile or not fileFound:
-                print("|---Downloading File: ", filename)              
+                print(" ---Downloading File(",(index+1),"/",totalFiles,"): ", filename)              
                 lf = open(pathFile, "wb")
+                ftp.login()
+                ftp.cwd(ftpDir)
+                ftp.cwd(year)
                 ftp.retrbinary("RETR " + filename, lf.write)                
+                ftp.close
                 lf.close      
-                notExtracted = True
-                
-            #if notExtracted:
-                #print("|---Extracting file") 
-                #time.sleep(20)                
-                
-                #with py7zr.SevenZipFile(pathFile, mode='r') as archive:
-                #    archive.extractall(subDirName)
-                #    archive.close()                  
-                #os.remove(pathFile)
-                #notExtracted = False                                                                          
-                                                            
+                notExtracted = True                                                                                        
         
         dados.append({"year":year, "files": fileInfoList})     
 
         #Extract Data
         if notExtracted:
-            print("|---Extracting files") 
+            
             os.chdir(subDirName)
-            files = os.listdir()
-            for f in files:
-                if "7z" in f:
-                    os.system("py7zr x " + f)
-                    os.remove(f)
+            files = glob.glob("*.7z")
+            totalFiles = len(files)
+            print("+---Extracting files")             
+            for f in files:                 
+                print(" -------File: ", f)
+                os.system("py7zr x " + f)
+                os.remove(f)
+
+            #Go back to previous folder    
+            os.chdir("../")  
+
+        #Parse to parquet file
+        os.chdir(subDirName)
+        if len(glob.glob("*.txt")) > 0:             
+            files = glob.glob("*.txt") 
+            print("+---Parsing parquet files") 
+            for f in files: 
+                print(" -------File: ", f)      
+                arrow_table = pc.read_csv(f[:-4]+".txt", parse_options=pc.ParseOptions(delimiter=";"),read_options=pc.ReadOptions(encoding='cp1252'))
+                parquet_file = f[:-4] + ".parquet"
+                pq.write_table(arrow_table, parquet_file)  
+                os.remove(f)
         #Go back to previous folder    
         os.chdir("../")
-        ftp.cwd("../")              
-
+                                
 #Remove first blank item
 dados.pop(0)
 if not versionControlFileEmpty:
     aux = versionControl["dados"]
     dados.append(aux)
+    print("!---Version Control Updated.")
 if versionControlFileEmpty or versionControlFileUpdate:
     versionControl = {"dados": dados}
     a_file = open(versionControlFile,"w")       
