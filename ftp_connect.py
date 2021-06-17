@@ -101,9 +101,9 @@ for year in folderList:
                                     versionControlFileUpdate = True                                                                        
 
             # Cheking and Updating                                                                     
-            if os.path.isfile(pathFile):                                
+            if len(glob.glob(subDirName+"*.7z")) > 0 or len(glob.glob(subDirName+"*.txt")) > 0:                                
                 print("!---File already exists! (", (index+1),"/",totalFiles,")")                
-                notExtracted = True                
+                #notExtracted = True                
                 if not fileFound:
                     versionControlFileUpdate = True
                 fileFound =  True                  
@@ -117,27 +117,21 @@ for year in folderList:
                 ftp.retrbinary("RETR " + filename, lf.write)                
                 ftp.close
                 lf.close      
-                notExtracted = True                                                                                        
+                #notExtracted = True                                                                                        
         
         dados.append({"year":year, "files": fileInfoList})     
 
         #Extract Data
-        if notExtracted:
-            
-            os.chdir(subDirName)
+        os.chdir(subDirName)
+        if len(glob.glob("*.7z")) > 0:                                             
             files = glob.glob("*.7z")
             totalFiles = len(files)
             print("+---Extracting files")             
             for f in files:                 
                 print(" -------File: ", f)
                 os.system("py7zr x " + f)
-                os.remove(f)
-
-            #Go back to previous folder    
-            os.chdir("../")  
-
-        #Parse to parquet file
-        os.chdir(subDirName)
+                os.remove(f)            
+        #Parse to parquet file        
         if len(glob.glob("*.txt")) > 0:             
             files = glob.glob("*.txt") 
             print("+---Parsing parquet files") 
