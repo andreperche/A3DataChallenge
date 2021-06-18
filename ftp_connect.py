@@ -142,7 +142,18 @@ for year in folderList:
             print("+---Parsing parquet files") 
             for f in files: 
                 print(" -------File: ", f)      
-                arrow_table = pc.read_csv(f[:-4]+".txt", parse_options=pc.ParseOptions(delimiter=";"),read_options=pc.ReadOptions(encoding='cp1252'))
+                arrow_table = pc.read_csv(f[:-4]+".txt", convert_options=pa.csv.ConvertOptions(include_columns=[ 'Qtd Hora Contr'#.encode('cp1252')
+                                                                                                                ,'Idade'#.encode('cp1252')
+                                                                                                                ,'Faixa Tempo Emprego'#.encode('cp1252')
+                                                                                                                ,'Escolaridade após 2005'#.encode('cp1252')
+                                                                                                                ,'Faixa Etária'#.encode('cp1252')
+                                                                                                                ,'Vínculo Ativo 31/12'#.encode('cp1252')
+                                                                                                                #,'CBO Ocupação 2002'#.encode('cp1252')
+                                                                                                                ,'CNAE 2.0 Classe'#.encode('cp1252')
+                                                                                                                ,'Sexo Trabalhador'#.encode('cp1252')
+                                                                                                                ,'Vl Remun Média Nom'#.encode('cp1252')
+                                                                                                                ,'Tipo Vínculo'#.encode('cp1252')
+                                            ]) ,parse_options=pc.ParseOptions(delimiter=";"),read_options=pc.ReadOptions(encoding='cp1252'))
                 parquet_file = f[:-4] + ".parquet"
                 pq.write_table(arrow_table, parquet_file)  
                 try:

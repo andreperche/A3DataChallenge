@@ -19,7 +19,7 @@ except FileExistsError:
 folders = os.listdir(dirName)
 os.chdir(dirName)
 for fo in folders:
-    if os.path.isdir(fo) and fo != 'summary' and int(fo) == 2018:
+    if os.path.isdir(fo) and fo != 'summary' and int(fo) == 2019:
         os.chdir(fo)
         print("+---Year: ",fo)
         pf = []
@@ -47,6 +47,7 @@ for fo in folders:
         arrow_table = pyarrow.concat_tables(pf)
         pq.write_table(arrow_table,'../summary/'+fo+'.parquet')
         os.chdir("../")
+
 
 #pandas = pat.to_pandas()
 #print(pandas.head(25))
