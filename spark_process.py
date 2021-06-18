@@ -14,41 +14,40 @@ from datetime import datetime
 from pyspark.sql import SparkSession
 from pyspark.sql import column
 from pyarrow.parquet import ParquetFile
-import pyarrow.parquet  
-import glob 
+import pyspark as ps
+from pyspark.sql.types import StructType,StructField, StringType, ShortType
+from pyspark.sql import SparkSession
+
+##Start Spark Session
+spark = SparkSession.builder.appName('A3Challenge').getOrCreate()
+
 
 print('Job start: '+'{}'.format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
 
 
-## Start Spark Session
-#spark = SparkSession.builder.appName("ProcessamentoA3Challenge") \
-#        .getOrCreate()
-        # .master("local[1]")
-       
+## Creates Empty RDD
+empty = spark.sparkContext.emptyRDD()
 
-## Loading Parquets 
-print('Imports parquets: '+'{}'.format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+## Create Default Schema
+schema = StructType([
+              StructField('qtd_hora_contr',           ShortType(),True),
+              StructField('idade',                    ShortType(),True),
+              StructField('faixa_tempo_emprego',      ShortType(),True),
+              StructField('escolaridade',             ShortType(),True),
+              StructField('faixa_etaria',             ShortType(),True),
+              StructField('vinculo_ativo_12',         ShortType(),True),
+              StructField('cbo_ocupacao_2002',        ShortType(),True),
+              StructField('cnae_2_classe',            ShortType(),True),
+              StructField('sexo_trabalhador',         ShortType(),True),
+              StructField('regiao',                   StringType(),True),
+              StructField('vl_remun_media_nom',       StringType(),True),
+              StructField('tipo_vinculo',             ShortType(),True)   
+          ])
 
-files = glob.glob('2010/*.parquet')
+sdf = spark.createDataFrame(empty,schema)
+sdf2 = spark.read.parquet('data/summary/*.parquet')
 
-# df = 0
-
-# for f in files:
-#     if df == 0:
-#         df = spark.read.parquet(f)
-#     else:
-#         df.write.mode('append').parquet(f)
-        
-
-print(pyarrow.parquet.read_metadata('2010/PI2010.parquet'))
-print(pyarrow.parquet.ParquetFile.schema('2010/PI2010.parquet'))
-
-
-#df = spark.read.parquet('2010/PI2010.parquet')
-#df.printSchema()
-#df.empty()
-
-print('Imports Ok: '+'{}'.format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+print(sdf2)
 
 
 
