@@ -64,8 +64,8 @@ for f in files:
                                                 ,'Tipo Vínculo'
                                             ]                                
                                 ))
-    arrow_table = pyarrow.concat_tables(pf)
-    pq.write_table(arrow_table,'../summary/summary.parquet')         
+arrow_table = pyarrow.concat_tables(pf)
+pq.write_table(arrow_table,'../summary/summary.parquet')         
 
 #pandas = pat.to_pandas()
 #print(pandas.head(25))
