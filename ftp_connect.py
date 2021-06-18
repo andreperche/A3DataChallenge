@@ -10,8 +10,8 @@ import pyarrow.parquet as pq
 import pyarrow.csv as pc
 import glob
 
-inicialYear = 2012
-finalYear = 2015
+inicialYear = 2010
+finalYear = 2019
 dirName = "data"
 versionControl = {}
 dados = [{}]
@@ -60,18 +60,18 @@ for year in folderList:
         except FileExistsError:
             print("!---Directory ", subDirName, " already exists!")        
         
-        ftp.close
-        ftp.login
+                
         fileList = []                            
         fileInfoList = [] 
-        ftp.login()
-        ftp.cwd(ftpDir)               
+        #ftp.quit
+        #ftp.login()
+        #ftp.cwd(ftpDir)               
         ftp.cwd(year)        
             
         ftp.retrlines("LIST", fileList.append)                    
         totalFiles = len(fileList)
         # Close connection because of timeout
-        ftp.close
+        #ftp.close
         # Downloading/Extracting each file within year folder
         print("+---Downloading Year: " + year)        
         for index in range(totalFiles):
@@ -113,11 +113,11 @@ for year in folderList:
             if updateFile or not fileFound:
                 print(" ---Downloading File(",(index+1),"/",totalFiles,"): ", filename)              
                 lf = open(pathFile, "wb")
-                ftp.login()
-                ftp.cwd(ftpDir)
-                ftp.cwd(year)
+                #ftp.login()
+                #ftp.cwd(ftpDir)
+                #ftp.cwd(year)
                 ftp.retrbinary("RETR " + filename, lf.write)                
-                ftp.close
+                #ftp.close
                 lf.close                                                                                                             
         
         dados.append({"year":year, "files": fileInfoList})     
@@ -129,9 +129,9 @@ for year in folderList:
             totalFiles = len(files)
             print("+---Extracting files")             
             for f in files:                 
-                print(" -------File: ", f)
-                os.system("py7zr x " + f)
+                print(" -------File: ", f)                
                 try:
+                    os.system("py7zr x " + f)
                     os.remove(f)            
                 except:
                     print(" -------File: ", f, " was not removed.")
@@ -150,7 +150,14 @@ for year in folderList:
                     print(" -------File: ", f, " was not removed.")
         #Go back to previous folder    
         os.chdir("../")
+        try:
+            ftp.cwd("../")
+        except:
+            ftp.login()
+            ftp.cwd(ftpDir)            
+
                                 
+ftp.quit()
 #Remove first blank item
 dados.pop(0)
 if not versionControlFileEmpty:
