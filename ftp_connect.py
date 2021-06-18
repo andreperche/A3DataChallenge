@@ -8,6 +8,7 @@ from flatten_dict import flatten
 from flatten_dict import unflatten
 import pyarrow.parquet as pq
 import pyarrow.csv as pc
+import pyarrow as pa
 import glob
 
 inicialYear = 2010
