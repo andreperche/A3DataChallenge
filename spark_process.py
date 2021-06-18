@@ -19,7 +19,7 @@ from pyspark.sql.types import StructType,StructField, StringType, ShortType
 from pyspark.sql import SparkSession
 
 ##Start Spark Session
-spark = SparkSession.builder.appName('SparkByExamples.com').getOrCreate()
+spark = SparkSession.builder.appName('A3Challenge').getOrCreate()
 
 
 print('Job start: '+'{}'.format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
