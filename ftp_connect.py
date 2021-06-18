@@ -129,9 +129,9 @@ for year in folderList:
             totalFiles = len(files)
             print("+---Extracting files")             
             for f in files:                 
-                print(" -------File: ", f)
-                os.system("py7zr x " + f)
+                print(" -------File: ", f)                
                 try:
+                    os.system("py7zr x " + f)
                     os.remove(f)            
                 except:
                     print(" -------File: ", f, " was not removed.")
@@ -150,7 +150,12 @@ for year in folderList:
                     print(" -------File: ", f, " was not removed.")
         #Go back to previous folder    
         os.chdir("../")
-        ftp.cwd("../")
+        try:
+            ftp.cwd("../")
+        except:
+            ftp.login()
+            ftp.cwd(ftpDir)            
+
                                 
 ftp.quit()
 #Remove first blank item
