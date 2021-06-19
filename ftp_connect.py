@@ -2,7 +2,6 @@ import ftplib
 from genericpath import getsize
 from json.decoder import JSONDecodeError
 import os
-import py7zr
 import json
 from flatten_dict import flatten
 from flatten_dict import unflatten
@@ -16,6 +15,7 @@ finalYear = 2019
 dirName = "data"
 versionControl = {}
 dados = [{}]
+# The versionControl is only used after first load server, so in future updates it won't need to load all files again, only the updated ones.
 versionControlFile = "versionControl.json"
 versionControlFileEmpty = False
 versionControlFileUpdate = False
@@ -50,10 +50,10 @@ else:
     versionControlFileEmpty = True
 
 for year in folderList:        
-    #Accessing each year folder (2010,2011,2012 ...)
+    ## Accessing each year folder (2010,2011,2012 ...)
     if(inicialYear <= int(year) <= finalYear):                  
         
-        #Creating local dir
+        ## Creating local dir
         try:                
             subDirName = year + "/"           
             os.mkdir(subDirName)
@@ -63,21 +63,17 @@ for year in folderList:
         
                 
         fileList = []                            
-        fileInfoList = [] 
-        #ftp.quit
-        #ftp.login()
-        #ftp.cwd(ftpDir)               
+        fileInfoList = []               
         ftp.cwd(year)        
             
         ftp.retrlines("LIST", fileList.append)                    
         totalFiles = len(fileList)
-        # Close connection because of timeout
-        #ftp.close
-        # Downloading/Extracting each file within year folder
+
+        ## Downloading/Extracting each file within year folder
         print("+---Downloading Year: " + year)        
         for index in range(totalFiles):
             
-            # Retrieving file details
+            ## Retrieving file details
             wordsFiles = fileList[index].split(None, 8)
             filename = wordsFiles[-1].lstrip()
             fileDate = wordsFiles[1].lstrip()
@@ -89,19 +85,22 @@ for year in folderList:
 
             fileInfoList.append({"filename":filename, "size":fileSize, "date":fileDate, "hour":fileHour}) 
 
-            # Check if versionControlFile is empty and if file already exists and is updated
-            if not versionControlFileEmpty:                
-                for i in versionControl["dados"] :
-                    #print(i)
-                    if i["year"] == year:
-                        for j in i["files"]:
-                            if j["filename"] == filename:
-                                fileFound = True
-                                if j["size"] != fileSize:                            
-                                    updateFile = True
-                                    versionControlFileUpdate = True                                                                        
-            
-            # Cheking and Updating                                                                     
+            ## Check if versionControlFile is empty and if file already exists and is updated
+            try:
+                if not versionControlFileEmpty:                
+                    for i in versionControl["dados"] :
+                        #print(i)
+                        if i["year"] == year:
+                            for j in i["files"]:
+                                if j["filename"] == filename:
+                                    fileFound = True
+                                    if j["size"] != fileSize:                            
+                                        updateFile = True
+                                        versionControlFileUpdate = True                                                                        
+            except:
+                print("!---Error reading versionControl File!")
+
+            ## Checking and Updating                                                                     
             if len(glob.glob(subDirName+filename)) > 0:                
                 if os.stat(subDirName+filename).st_size != fileSize:
                     updateFile = True            
@@ -114,16 +113,12 @@ for year in folderList:
             if updateFile or not fileFound:
                 print(" ---Downloading File(",(index+1),"/",totalFiles,"): ", filename)              
                 lf = open(pathFile, "wb")
-                #ftp.login()
-                #ftp.cwd(ftpDir)
-                #ftp.cwd(year)
-                ftp.retrbinary("RETR " + filename, lf.write)                
-                #ftp.close
+                ftp.retrbinary("RETR " + filename, lf.write)
                 lf.close                                                                                                             
         
         dados.append({"year":year, "files": fileInfoList})     
 
-        #Extract Data
+        ## Extracting 7z Data
         os.chdir(subDirName)
         if len(glob.glob("*.7z")) > 0:                                             
             files = glob.glob("*.7z")
@@ -136,41 +131,34 @@ for year in folderList:
                     os.remove(f)            
                 except:
                     print(" -------File: ", f, " was not removed.")
-        #Parse to parquet file        
+        ## Parse to parquet file        
         if len(glob.glob("*.txt")) > 0:             
             files = glob.glob("*.txt") 
             print("+---Parsing parquet files") 
             for f in files: 
                 print(" -------File: ", f)      
-                arrow_table = pc.read_csv(f[:-4]+".txt", convert_options=pa.csv.ConvertOptions(include_columns=[ 'Qtd Hora Contr'#.encode('cp1252')
-                                                                                                                ,'Idade'#.encode('cp1252')
-                                                                                                                ,'Faixa Tempo Emprego'#.encode('cp1252')
-                                                                                                                ,'Escolaridade após 2005'#.encode('cp1252')
-                                                                                                                ,'Faixa Etária'#.encode('cp1252')
-                                                                                                                ,'Vínculo Ativo 31/12'#.encode('cp1252')
-                                                                                                                #,'CBO Ocupação 2002'#.encode('cp1252')
-                                                                                                                ,'CNAE 2.0 Classe'#.encode('cp1252')
-                                                                                                                ,'Sexo Trabalhador'#.encode('cp1252')
-                                                                                                                ,'Vl Remun Média Nom'#.encode('cp1252')
-                                                                                                                ,'Tipo Vínculo'#.encode('cp1252')
+                arrow_table = pc.read_csv(f[:-4]+".txt", convert_options=pa.csv.ConvertOptions(include_columns=[ 'Qtd Hora Contr'                                                                                                        
+                                                                                                                ,'Escolaridade após 2005'                                                                                                        
+                                                                                                                ,'CNAE 2.0 Classe'
+                                                                                                                ,'Sexo Trabalhador'
+                                                                                                                ,'Vl Remun Média Nom'
                                             ]) ,parse_options=pc.ParseOptions(delimiter=";"),read_options=pc.ReadOptions(encoding='cp1252'))
                 parquet_file = f[:-4] + ".parquet"
                 pq.write_table(arrow_table, parquet_file)  
                 try:
-                    os.remove(f)            
+                    os.remove(f)
                 except:
                     print(" -------File: ", f, " was not removed.")
-        #Go back to previous folder    
+        ## Go back to previous folder    
         os.chdir("../")
         try:
             ftp.cwd("../")
         except:
             ftp.login()
-            ftp.cwd(ftpDir)            
-
-                                
+            ftp.cwd(ftpDir)                                          
 ftp.quit()
-#Remove first blank item
+
+## Remove first blank item
 dados.pop(0)
 if not versionControlFileEmpty:
     aux = versionControl["dados"]
